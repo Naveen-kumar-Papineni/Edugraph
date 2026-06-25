@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EduGraph — Adaptive Learning Platform</title>
+<style>
+  :root{
+    --bg:#0e1a16;
+    --panel:#13241d;
+    --panel-line:#234034;
+    --ink:#dfe9e2;
+    --muted:#7fa492;
+    --accent:#4fd1a5;
+    --accent2:#e3a948;
+    --danger:#e3614f;
+    --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+    --serif:'Source Serif Pro',Georgia,serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--mono); font-size:14px;
+    background-image:
+      linear-gradient(var(--panel-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--panel-line) 1px, transparent 1px);
+    background-size:28px 28px;
+    background-attachment:fixed;
+  }
+  header{
+    padding:28px 32px 18px; border-bottom:1px solid var(--panel-line);
+    background:linear-gradient(180deg, rgba(14,26,22,.96), rgba(14,26,22,.85));
+  }
+  header h1{
+    font-family:var(--serif); font-weight:700; font-size:28px; margin:0;
+    color:var(--ink); letter-spacing:.3px;
+  }
+  header h1 span{color:var(--accent);}
+  header p{margin:6px 0 0; color:var(--muted); font-size:13px;}
+  .summary{display:flex; gap:18px; margin-top:14px; flex-wrap:wrap;}
+  .pill{
+    border:1px solid var(--panel-line); padding:6px 12px; border-radius:3px;
+    color:var(--muted); font-size:12px; background:rgba(79,209,165,.05);
+  }
+  .pill b{color:var(--accent); font-weight:700;}
+  nav{
+    display:flex; gap:2px; padding:0 32px; border-bottom:1px solid var(--panel-line);
+    overflow-x:auto;
+  }
+  nav button{
+    background:none; border:none; color:var(--muted); padding:12px 16px;
+    cursor:pointer; font-family:var(--mono); font-size:13px; border-bottom:2px solid transparent;
+    white-space:nowrap;
+  }
+  nav button.active{color:var(--accent); border-bottom-color:var(--accent);}
+  nav button:hover{color:var(--ink);}
+  main{padding:26px 32px 60px; max-width:1180px;}
+  .module{display:none;}
+  .module.active{display:block;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:18px;}
+  .card{
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:6px;
+    padding:18px 20px;
+  }
+  .card h2{
+    font-family:var(--serif); font-size:16px; margin:0 0 4px; color:var(--ink);
+  }
+  .card .tag{
+    font-size:10px; color:var(--accent2); letter-spacing:.08em; text-transform:uppercase;
+  }
+  .card p.desc{color:var(--muted); font-size:12.5px; margin:6px 0 14px; line-height:1.5;}
+  label{display:block; font-size:12px; color:var(--muted); margin:10px 0 4px;}
+  input, select{
+    width:100%; background:var(--bg); border:1px solid var(--panel-line); color:var(--ink);
+    padding:7px 9px; border-radius:3px; font-family:var(--mono); font-size:13px;
+  }
+  input:focus, select:focus{outline:1px solid var(--accent); border-color:var(--accent);}
+  button.run{
+    margin-top:14px; background:var(--accent); color:#0b1612; border:none; font-weight:700;
+    padding:9px 16px; border-radius:3px; cursor:pointer; font-family:var(--mono); font-size:12.5px;
+    letter-spacing:.03em;
+  }
+  button.run:hover{background:#6be3b9;}
+  button.secondary{
+    background:none; border:1px solid var(--panel-line); color:var(--ink);
+    padding:9px 16px; border-radius:3px; cursor:pointer; font-family:var(--mono); font-size:12.5px;
+    margin-left:8px;
+  }
+  button.secondary:hover{border-color:var(--accent); color:var(--accent);}
+  pre.out{
+    margin-top:14px; background:#0a140f; border:1px solid var(--panel-line); border-radius:4px;
+    padding:12px 14px; font-size:12.3px; color:var(--accent); white-space:pre-wrap; word-break:break-word;
+    max-height:340px; overflow:auto;
+  }
+  pre.out.empty{color:var(--muted);}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px;}
+  th,td{text-align:left; padding:6px 8px; border-bottom:1px solid var(--panel-line);}
+  th{color:var(--accent2); text-transform:uppercase; font-size:10.5px; letter-spacing:.06em;}
+  td{color:var(--ink);}
+  .full{grid-column:1/-1;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .toast{
+    position:fixed; bottom:20px; right:24px; background:var(--panel); border:1px solid var(--accent);
+    color:var(--ink); padding:10px 16px; border-radius:4px; font-size:12.5px; display:none; z-index:50;
+    max-width:360px;
+  }
+  .toast.err{border-color:var(--danger); color:#ffd2cc;}
+  .badge{display:inline-block; padding:2px 7px; border-radius:10px; font-size:10.5px; background:rgba(79,209,165,.12); color:var(--accent); margin-left:6px;}
+  .footer-note{color:var(--muted); font-size:11.5px; margin-top:26px;}
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--panel-line); border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Edu<span>Graph</span> — Adaptive Learning Dashboard</h1>
+  <p>Trees, graphs, sorting and greedy/DP algorithms over your course &amp; student data — served live from the Java backend.</p>
+  <div class="summary">
+    <div class="pill">Courses loaded: <b id="sumCourses">0</b></div>
+    <div class="pill">Students loaded: <b id="sumStudents">0</b></div>
+    <div class="pill" id="apiPill">API: <b id="apiStatus">checking…</b></div>
+  </div>
+</header>
+
+<nav id="tabs"></nav>
+<main id="modules"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = ""; // same-origin
+
+const TABS = [
+  {id:"data", label:"Data"},
+  {id:"trees", label:"M1 · BST / AVL"},
+  {id:"ranges", label:"M2 · Segment / Fenwick"},
+  {id:"graph", label:"M3 · Graph Traversal"},
+  {id:"paths", label:"M4 · Dijkstra / Topo"},
+  {id:"sorting", label:"M5 · Sorting"},
+  {id:"optimize", label:"M6 · Knapsack / LIS"},
+  {id:"schedule", label:"M7 · Scheduler"},
+];
+
+const tabsEl = document.getElementById("tabs");
+const modulesEl = document.getElementById("modules");
+
+TABS.forEach((t,i)=>{
+  const b = document.createElement("button");
+  b.textContent = t.label;
+  b.dataset.id = t.id;
+  if(i===0) b.classList.add("active");
+  b.onclick = ()=>switchTab(t.id);
+  tabsEl.appendChild(b);
+});
+
+function switchTab(id){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active", b.dataset.id===id));
+  document.querySelectorAll(".module").forEach(m=>m.classList.toggle("active", m.id==="mod-"+id));
+}
+
+function toast(msg, isErr){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast" + (isErr ? " err" : "");
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.style.display="none", 4000);
+}
+
+async function api(path, opts){
+  try{
+    const res = await fetch(API + path, opts);
+    const data = await res.json();
+    if(!res.ok && data.error) throw new Error(data.error);
+    return data;
+  }catch(e){
+    toast("Request failed: " + e.message, true);
+    throw e;
+  }
+}
+
+function show(el, data){
+  el.classList.remove("empty");
+  el.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+}
+
+function table(headers, rows){
+  let h = "<table><thead><tr>" + headers.map(x=>`<th>${x}</th>`).join("") + "</tr></thead><tbody>";
+  rows.forEach(r=>{ h += "<tr>" + r.map(c=>`<td>${c}</td>`).join("") + "</tr>"; });
+  return h + "</tbody></table>";
+}
+
+async function refreshSummary(){
+  try{
+    const s = await api("/api/data/summary");
+    document.getElementById("sumCourses").textContent = s.courses;
+    document.getElementById("sumStudents").textContent = s.students;
+    document.getElementById("apiStatus").textContent = "online";
+  }catch(e){
+    document.getElementById("apiStatus").textContent = "offline";
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE: DATA
+// ════════════════════════════════════════════════════════════
+function buildDataModule(){
+  const m = document.createElement("div");
+  m.className = "module active"; m.id = "mod-data";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <span class="tag">Import</span>
+        <h2>Load CSV Data</h2>
+        <p class="desc">Loads courses.csv, students.csv and results.csv from the backend's <code>data/</code> folder, same format used by the original CLI.</p>
+        <button class="run" id="btnLoad">Load default CSVs</button>
+        <button class="secondary" id="btnClear">Clear all data</button>
+        <pre class="out empty" id="outLoad">No data loaded yet.</pre>
+      </div>
+      <div class="card full">
+        <span class="tag">Courses</span>
+        <h2>Course Catalogue</h2>
+        <button class="run" id="btnCourses">Refresh courses</button>
+        <div id="coursesTable"></div>
+      </div>
+      <div class="card full">
+        <span class="tag">Students</span>
+        <h2>Student Roster</h2>
+        <button class="run" id="btnStudents">Refresh students</button>
+        <div id="studentsTable"></div>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnLoad").onclick = async ()=>{
+    const d = await api("/api/data/load-default");
+    show(m.querySelector("#outLoad"), d.log.join("\n"));
+    refreshSummary();
+  };
+  m.querySelector("#btnClear").onclick = async ()=>{
+    await api("/api/data/clear");
+    show(m.querySelector("#outLoad"), "Data cleared.");
+    m.querySelector("#coursesTable").innerHTML = "";
+    m.querySelector("#studentsTable").innerHTML = "";
+    refreshSummary();
+  };
+  m.querySelector("#btnCourses").onclick = async ()=>{
+    const cs = await api("/api/courses");
+    m.querySelector("#coursesTable").innerHTML = cs.length ? table(
+      ["ID","Name","Credits","Difficulty","Popularity","Prereqs"],
+      cs.map(c=>[c.courseId,c.name,c.credits,c.difficulty,c.popularity,(c.prerequisites||[]).join(", ")||"—"])
+    ) : "<p class='desc'>No courses loaded.</p>";
+  };
+  m.querySelector("#btnStudents").onclick = async ()=>{
+    const ss = await api("/api/students");
+    m.querySelector("#studentsTable").innerHTML = ss.length ? table(
+      ["Roll","Name","GPA","Enrolled","Results"],
+      ss.map(s=>[s.rollNumber,s.name,s.gpa,(s.enrolledCourses||[]).join(", ")||"—",s.results.length])
+    ) : "<p class='desc'>No students loaded.</p>";
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 1: TREES
+// ════════════════════════════════════════════════════════════
+function buildTreesModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-trees";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <span class="tag">Module 1</span>
+        <h2>BST_CourseIndex <span class="badge">by courseId</span></h2>
+        <p class="desc">Binary search tree keyed on course ID. Search is O(h); in-order traversal yields courses sorted alphabetically by ID.</p>
+        <label>Course ID to search</label>
+        <input id="bstId" placeholder="e.g. C103" />
+        <button class="run" id="btnBstSearch">Search</button>
+        <button class="secondary" id="btnBstInorder">Show in-order</button>
+        <pre class="out empty" id="outBst">Run a search or in-order traversal.</pre>
+      </div>
+      <div class="card">
+        <span class="tag">Module 1</span>
+        <h2>AVL_StudentDB <span class="badge">by rollNumber</span></h2>
+        <p class="desc">Self-balancing AVL tree keyed on roll number — guarantees O(log n) search even after many insertions.</p>
+        <label>Roll number to search</label>
+        <input id="avlRoll" placeholder="e.g. 101" />
+        <button class="run" id="btnAvlSearch">Search</button>
+        <button class="secondary" id="btnAvlInorder">Show in-order</button>
+        <pre class="out empty" id="outAvl">Run a search or in-order traversal.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnBstSearch").onclick = async ()=>{
+    const id = m.querySelector("#bstId").value.trim();
+    const d = await api("/api/bst/search?id=" + encodeURIComponent(id));
+    show(m.querySelector("#outBst"), d);
+  };
+  m.querySelector("#btnBstInorder").onclick = async ()=>{
+    const d = await api("/api/bst/inorder");
+    show(m.querySelector("#outBst"), d);
+  };
+  m.querySelector("#btnAvlSearch").onclick = async ()=>{
+    const roll = m.querySelector("#avlRoll").value.trim();
+    const d = await api("/api/avl/search?roll=" + encodeURIComponent(roll));
+    show(m.querySelector("#outAvl"), d);
+  };
+  m.querySelector("#btnAvlInorder").onclick = async ()=>{
+    const d = await api("/api/avl/inorder");
+    show(m.querySelector("#outAvl"), d);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 2: RANGES
+// ════════════════════════════════════════════════════════════
+function buildRangesModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-ranges";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <span class="tag">Module 2</span>
+        <h2>SegmentTree_Analytics</h2>
+        <p class="desc">Builds over students' GPA×10 scores (index order = load order). Range queries run in O(log n).</p>
+        <div class="row2">
+          <div><label>Range start (l)</label><input id="segL" value="0" /></div>
+          <div><label>Range end (r)</label><input id="segR" value="2" /></div>
+        </div>
+        <button class="run" id="btnSeg">Query range</button>
+        <pre class="out empty" id="outSeg">Set a range and query.</pre>
+      </div>
+      <div class="card">
+        <span class="tag">Module 2</span>
+        <h2>FenwickTree_Scores</h2>
+        <p class="desc">Binary Indexed Tree (1-indexed) over the same score array. Used for fast prefix/range sums.</p>
+        <div class="row2">
+          <div><label>Range start (l, 1-indexed)</label><input id="fenL" value="1" /></div>
+          <div><label>Range end (r)</label><input id="fenR" value="3" /></div>
+        </div>
+        <button class="run" id="btnFen">Query range sum</button>
+        <pre class="out empty" id="outFen">Set a range and query.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnSeg").onclick = async ()=>{
+    const l = m.querySelector("#segL").value, r = m.querySelector("#segR").value;
+    const d = await api(`/api/segment?l=${l}&r=${r}`);
+    show(m.querySelector("#outSeg"), d);
+  };
+  m.querySelector("#btnFen").onclick = async ()=>{
+    const l = m.querySelector("#fenL").value, r = m.querySelector("#fenR").value;
+    const d = await api(`/api/fenwick?l=${l}&r=${r}`);
+    show(m.querySelector("#outFen"), d);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 3: GRAPH TRAVERSAL
+// ════════════════════════════════════════════════════════════
+function buildGraphModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-graph";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card full">
+        <span class="tag">Module 3</span>
+        <h2>CourseGraph <span class="badge">adjacency list</span></h2>
+        <p class="desc">Directed graph: an edge prerequisite → course means the prerequisite must be completed first. Edge weight = target course's difficulty.</p>
+        <button class="run" id="btnGraph">Show graph</button>
+        <pre class="out empty" id="outGraph">Load courses, then view the graph.</pre>
+      </div>
+      <div class="card">
+        <span class="tag">Module 3</span>
+        <h2>BFS_PathExplorer</h2>
+        <p class="desc">Breadth-first traversal and shortest hop-count path (ignores weights).</p>
+        <label>Start course</label><input id="bfsStart" placeholder="C101" />
+        <label>Target course (optional, for shortest path)</label><input id="bfsTarget" placeholder="C105" />
+        <button class="run" id="btnBfs">Run BFS</button>
+        <pre class="out empty" id="outBfs">Set start (and optionally target).</pre>
+      </div>
+      <div class="card">
+        <span class="tag">Module 3</span>
+        <h2>DFS_CycleDetector</h2>
+        <p class="desc">Depth-first traversal plus cycle detection across the whole prerequisite graph.</p>
+        <label>Start course</label><input id="dfsStart" placeholder="C101" />
+        <button class="run" id="btnDfs">Run DFS + cycle check</button>
+        <pre class="out empty" id="outDfs">Set a start course.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnGraph").onclick = async ()=>{
+    const d = await api("/api/graph");
+    show(m.querySelector("#outGraph"), d);
+  };
+  m.querySelector("#btnBfs").onclick = async ()=>{
+    const s = m.querySelector("#bfsStart").value.trim();
+    const t = m.querySelector("#bfsTarget").value.trim();
+    let url = "/api/bfs?start=" + encodeURIComponent(s);
+    if(t) url += "&target=" + encodeURIComponent(t);
+    const d = await api(url);
+    show(m.querySelector("#outBfs"), d);
+  };
+  m.querySelector("#btnDfs").onclick = async ()=>{
+    const s = m.querySelector("#dfsStart").value.trim();
+    const d = await api("/api/dfs?start=" + encodeURIComponent(s));
+    show(m.querySelector("#outDfs"), d);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 4: PATHS
+// ════════════════════════════════════════════════════════════
+function buildPathsModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-paths";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <span class="tag">Module 4</span>
+        <h2>Dijkstra_LearningPath</h2>
+        <p class="desc">Weighted shortest path (weight = difficulty) — the "easiest" route through prerequisites.</p>
+        <label>Source course</label><input id="dijkSrc" placeholder="C101" />
+        <label>Target course (optional)</label><input id="dijkDst" placeholder="C105" />
+        <button class="run" id="btnDijk">Compute distances</button>
+        <pre class="out empty" id="outDijk">Set a source course.</pre>
+      </div>
+      <div class="card">
+        <span class="tag">Module 4</span>
+        <h2>TopoSort_CourseOrder <span class="badge">Kahn's algorithm</span></h2>
+        <p class="desc">Produces a valid course completion order respecting all prerequisites. Flags invalid (cyclic) prerequisite chains.</p>
+        <button class="run" id="btnTopo">Compute order</button>
+        <pre class="out empty" id="outTopo">Run topological sort.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnDijk").onclick = async ()=>{
+    const s = m.querySelector("#dijkSrc").value.trim();
+    const t = m.querySelector("#dijkDst").value.trim();
+    let url = "/api/dijkstra?source=" + encodeURIComponent(s);
+    if(t) url += "&target=" + encodeURIComponent(t);
+    const d = await api(url);
+    show(m.querySelector("#outDijk"), d);
+  };
+  m.querySelector("#btnTopo").onclick = async ()=>{
+    const d = await api("/api/toposort");
+    show(m.querySelector("#outTopo"), d);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 5: SORTING
+// ════════════════════════════════════════════════════════════
+function buildSortingModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-sorting";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <span class="tag">Module 5</span>
+        <h2>MergeSort_StudentRank</h2>
+        <p class="desc">Stable O(n log n) sort of all students by GPA, descending.</p>
+        <button class="run" id="btnMerge">Sort students by GPA</button>
+        <div id="mergeTable"></div>
+      </div>
+      <div class="card">
+        <span class="tag">Module 5</span>
+        <h2>HeapSort_TopStudents</h2>
+        <p class="desc">Min-heap of size K finds the top-K students in O(n log K).</p>
+        <label>K</label><input id="heapK" value="3" />
+        <button class="run" id="btnHeap">Get top K</button>
+        <div id="heapTable"></div>
+      </div>
+      <div class="card">
+        <span class="tag">Module 5</span>
+        <h2>QuickSort_CourseRank</h2>
+        <p class="desc">In-place quicksort of courses by popularity, descending.</p>
+        <button class="run" id="btnQuick">Sort courses by popularity</button>
+        <div id="quickTable"></div>
+      </div>
+      <div class="card">
+        <span class="tag">Module 5</span>
+        <h2>RadixSort_RollNumbers</h2>
+        <p class="desc">Non-comparison LSD radix sort over all student roll numbers.</p>
+        <button class="run" id="btnRadix">Sort roll numbers</button>
+        <pre class="out empty" id="outRadix">Run radix sort.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnMerge").onclick = async ()=>{
+    const ss = await api("/api/sort/students");
+    m.querySelector("#mergeTable").innerHTML = ss.length ? table(
+      ["Rank","Name","Roll","GPA"], ss.map((s,i)=>[i+1,s.name,s.rollNumber,s.gpa])
+    ) : "<p class='desc'>No students loaded.</p>";
+  };
+  m.querySelector("#btnHeap").onclick = async ()=>{
+    const k = m.querySelector("#heapK").value;
+    const ss = await api("/api/sort/topstudents?k=" + encodeURIComponent(k));
+    m.querySelector("#heapTable").innerHTML = ss.length ? table(
+      ["Rank","Name","Roll","GPA"], ss.map((s,i)=>[i+1,s.name,s.rollNumber,s.gpa])
+    ) : "<p class='desc'>No students loaded.</p>";
+  };
+  m.querySelector("#btnQuick").onclick = async ()=>{
+    const cs = await api("/api/sort/courses");
+    m.querySelector("#quickTable").innerHTML = cs.length ? table(
+      ["Rank","ID","Name","Popularity"], cs.map((c,i)=>[i+1,c.courseId,c.name,c.popularity])
+    ) : "<p class='desc'>No courses loaded.</p>";
+  };
+  m.querySelector("#btnRadix").onclick = async ()=>{
+    const d = await api("/api/sort/rollnumbers");
+    show(m.querySelector("#outRadix"), d);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 6: OPTIMIZE (KNAPSACK / LIS)
+// ════════════════════════════════════════════════════════════
+function buildOptimizeModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-optimize";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <span class="tag">Module 6</span>
+        <h2>Knapsack_CourseSelector</h2>
+        <p class="desc">0/1 Knapsack (DP) picks whole courses to maximise value within a credit limit; Fractional Knapsack (greedy) allows partial credit for comparison.</p>
+        <label>Credit limit</label><input id="creditLimit" value="10" />
+        <button class="run" id="btnKnap">Select courses</button>
+        <pre class="out empty" id="outKnap">Set a credit limit and run.</pre>
+      </div>
+      <div class="card">
+        <span class="tag">Module 6</span>
+        <h2>LIS_ProgressTracker</h2>
+        <p class="desc">Longest Increasing Subsequence of a student's assessment percentages — their longest streak of improvement.</p>
+        <label>Student roll number</label><input id="lisRoll" placeholder="101" />
+        <button class="run" id="btnLis">Analyse progress</button>
+        <pre class="out empty" id="outLis">Set a roll number and run.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  m.querySelector("#btnKnap").onclick = async ()=>{
+    const cl = m.querySelector("#creditLimit").value;
+    const d = await api("/api/knapsack?creditLimit=" + encodeURIComponent(cl));
+    show(m.querySelector("#outKnap"), d);
+  };
+  m.querySelector("#btnLis").onclick = async ()=>{
+    const r = m.querySelector("#lisRoll").value.trim();
+    const d = await api("/api/lis?roll=" + encodeURIComponent(r));
+    show(m.querySelector("#outLis"), d);
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODULE 7: SCHEDULER
+// ════════════════════════════════════════════════════════════
+function buildScheduleModule(){
+  const m = document.createElement("div");
+  m.className = "module"; m.id = "mod-schedule";
+  m.innerHTML = `
+    <div class="grid">
+      <div class="card full">
+        <span class="tag">Module 7</span>
+        <h2>ActivitySelector_Schedule <span class="badge">greedy, earliest-finish-first</span></h2>
+        <p class="desc">Selects the maximum number of non-overlapping study sessions. Loads from <code>data/sessions.csv</code> by default, or add your own below (24h hours).</p>
+        <div class="row2">
+          <input id="sessName" placeholder="Session name" />
+          <div class="row2" style="grid-template-columns:1fr 1fr auto;">
+            <input id="sessStart" placeholder="start hr e.g. 9" />
+            <input id="sessEnd" placeholder="end hr e.g. 11" />
+            <button class="secondary" id="btnAddSess">Add</button>
+          </div>
+        </div>
+        <div id="sessList" style="margin-top:10px; color:var(--muted); font-size:12.5px;"></div>
+        <button class="run" id="btnSchedDefault">Load &amp; schedule from sessions.csv</button>
+        <button class="secondary" id="btnSchedCustom">Schedule my list above</button>
+        <pre class="out empty" id="outSched">Load default sessions or build your own list.</pre>
+      </div>
+    </div>`;
+  modulesEl.appendChild(m);
+
+  let custom = [];
+  function renderList(){
+    m.querySelector("#sessList").innerHTML = custom.length
+      ? custom.map(s=>`${s.name} (${s.start}:00–${s.end}:00)`).join(" · ")
+      : "No custom sessions added yet.";
+  }
+  m.querySelector("#btnAddSess").onclick = ()=>{
+    const name = m.querySelector("#sessName").value.trim();
+    const start = parseInt(m.querySelector("#sessStart").value, 10);
+    const end = parseInt(m.querySelector("#sessEnd").value, 10);
+    if(!name || isNaN(start) || isNaN(end) || start >= end){ toast("Enter a name and valid start < end hours.", true); return; }
+    custom.push({name, start, end});
+    m.querySelector("#sessName").value = "";
+    m.querySelector("#sessStart").value = "";
+    m.querySelector("#sessEnd").value = "";
+    renderList();
+  };
+  m.querySelector("#btnSchedDefault").onclick = async ()=>{
+    const d = await api("/api/schedule");
+    show(m.querySelector("#outSched"), d);
+  };
+  m.querySelector("#btnSchedCustom").onclick = async ()=>{
+    if(custom.length === 0){ toast("Add at least one session first.", true); return; }
+    const d = await api("/api/schedule", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(custom)
+    });
+    show(m.querySelector("#outSched"), d);
+  };
+}
+
+buildDataModule();
+buildTreesModule();
+buildRangesModule();
+buildGraphModule();
+buildPathsModule();
+buildSortingModule();
+buildOptimizeModule();
+buildScheduleModule();
+refreshSummary();
+setInterval(refreshSummary, 8000);
+</script>
+</body>
+</html>

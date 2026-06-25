@@ -1,0 +1,7 @@
+courseId,name,credits,difficulty,popularity,prerequisites
+C101,Intro to Programming,3,2,3,
+C102,Data Structures,4,5,2,C101
+C103,Algorithms,4,7,1,C102
+C104,Database Systems,3,4,0,C101
+C105,Machine Learning,4,9,4,C103|C104
+C106,Operating Systems,3,6,0,C102
